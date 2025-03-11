@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def invoke_agent(agent_id, agent_alias_id,brq_aws_access_key_id, aws_secret_access_key, region_name, session_id, prompt):
+def invoke_agent(agent_id, agent_alias_id,brq_aws_access_key_id, brq_aws_secret_access_key, brq_region_name, session_id, prompt):
     try:
         client = boto3.session.Session().client(service_name="bedrock-agent-runtime", 
                                                 aws_access_key_id=brq_aws_access_key_id,
