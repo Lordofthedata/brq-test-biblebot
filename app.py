@@ -67,6 +67,9 @@ if prompt := st.chat_input():
                 response = bedrock_agent_runtime.invoke_agent(
                     agent_id,
                     agent_alias_id,
+                    brq_aws_access_key_id, 
+                    brq_aws_secret_access_key, 
+                    brq_region_name
                     st.session_state.session_id,
                     prompt
                 )
