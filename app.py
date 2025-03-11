@@ -27,6 +27,9 @@ agent_id = os.environ.get("BEDROCK_AGENT_ID")
 agent_alias_id = os.environ.get("BEDROCK_AGENT_ALIAS_ID", "TSTALIASID")  # TSTALIASID is the default test alias ID
 ui_title = os.environ.get("BEDROCK_AGENT_TEST_UI_TITLE", "Agents for Amazon Bedrock Test UI")
 ui_icon = os.environ.get("BEDROCK_AGENT_TEST_UI_ICON")
+brq_aws_access_key_id=os.environ.get("AWS_ACCESS_KEY")
+brq_aws_secret_access_key=os.environ.get("AWS_SECRET_KEY")
+brq_region_name=os.environ.get("AWS_REGION")
 
 
 def init_session_state():
