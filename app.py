@@ -49,6 +49,12 @@ if len(st.session_state.items()) == 0:
 with st.sidebar:
     if st.button("Reset Session"):
         init_session_state()
+        
+# Display an initial welcome message
+if 'messages' not in st.session_state:
+    st.session_state['messages'] = [
+        {"role": "system", "content": "Willkommen bei deinem digitalen Begleiter fürs Bibelstudium. Bitte stelle mir eine Frage - ich versuche auf Basis mehrerer hundert renommierter Bibelkommentare eine Antwort auf deine Frage zu finden."}
+    ]
 
 # Messages in the conversation
 for message in st.session_state.messages:
