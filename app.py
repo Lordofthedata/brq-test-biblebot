@@ -69,7 +69,7 @@ if prompt := st.chat_input():
                     agent_alias_id,
                     brq_aws_access_key_id, 
                     brq_aws_secret_access_key, 
-                    brq_region_name
+                    brq_region_name,
                     st.session_state.session_id,
                     prompt
                 )
