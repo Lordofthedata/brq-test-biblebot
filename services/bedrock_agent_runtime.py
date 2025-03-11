@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 def invoke_agent(agent_id, agent_alias_id, session_id, prompt):
     try:
-        client = boto3.session.Session().client(service_name="bedrock-agent-runtime", region_name="eu-central-1")
+        client = boto3.session.Session().client(service_name="bedrock-agent-runtime", 
+                                                aws_access_key_id=os.environ.get("AWS_ACCESS_KEY"),
+                                                aws_secret_access_key=os.environ.get("AWS_SECRET_KEY"),
+                                                region_name=os.environ.get("AWS_REGION")
+                                               )
         # See https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-agent-runtime/client/invoke_agent.html
         response = client.invoke_agent(
             agentId=agent_id,
