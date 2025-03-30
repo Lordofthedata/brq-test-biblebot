@@ -8,13 +8,6 @@ from services import bedrock_agent_runtime
 import streamlit as st
 import uuid
 import yaml
-import time
-import botocore.exceptions
-
-MAX_RETRIES = 3
-retry_count = 0
-response = None
-
 
 load_dotenv()
 
@@ -75,76 +68,62 @@ if prompt := st.chat_input():
 
     with st.chat_message("assistant"):
         with st.empty():
-            with st.spinner("Warten auf Antwort..."):
-                while retry_count < MAX_RETRIES:
-                    try:
-                        response = bedrock_agent_runtime.invoke_agent(
-                            agent_id,
-                            agent_alias_id,
-                            brq_aws_access_key_id,
-                            brq_aws_secret_access_key,
-                            brq_region_name,
-                            st.session_state.session_id,
-                            prompt
-                        )
-                        break  # Break the loop if successful
-                    except botocore.exceptions.EventStreamError as e:
-                        retry_count += 1
-                        logger.warning(f"EventStreamError occurred. Retrying {retry_count}/{MAX_RETRIES}...")
-                        time.sleep(2)  # Small delay before retrying
-                    except Exception as e:
-                        logger.error(f"Unexpected error: {e}")
-                        break
+            with st.spinner():
+                response = bedrock_agent_runtime.invoke_agent(
+                    agent_id,
+                    agent_alias_id,
+                    brq_aws_access_key_id, 
+                    brq_aws_secret_access_key, 
+                    brq_region_name,
+                    st.session_state.session_id,
+                    prompt
+                )
+            output_text = response["output_text"]
 
-                if response is None:
-                    st.error("Fehler beim Abrufen der Daten. Bitte versuche es später erneut.")
-                else:
-                    output_text = response.get("output_text", "Keine Antwort erhalten")
+            # Check if the output is a JSON object with the instruction and result fields
+            try:
+                # When parsing the JSON, strict mode must be disabled to handle badly escaped newlines
+                # TODO: This is still broken in some cases - AWS needs to double sescape the field contents
+                output_json = json.loads(output_text, strict=False)
+                if "instruction" in output_json and "result" in output_json:
+                    output_text = output_json["result"]
+            except json.JSONDecodeError as e:
+                pass
 
-                    # Check if the output is a JSON object with the instruction and result fields
-                    try:
-                        output_json = json.loads(output_text, strict=False)
-                        if "instruction" in output_json and "result" in output_json:
-                            output_text = output_json["result"]
-                    except json.JSONDecodeError:
-                        pass
+            # Add citations
+            if len(response["citations"]) > 0:
+                citation_num = 1
+                output_text = re.sub(r"%\[(\d+)\]%", r"<sup>[\1]</sup>", output_text)
+                citation_locs = ""
+                for citation in response["citations"]:
+                    for retrieved_ref in citation["retrievedReferences"]:
+                        citation_marker = f"[{citation_num}]"
+                        match retrieved_ref['location']['type']:
+                            case 'CONFLUENCE':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['confluenceLocation']['url']}"
+                            case 'CUSTOM':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['customDocumentLocation']['id']}"
+                            case 'KENDRA':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['kendraDocumentLocation']['uri']}"
+                            case 'S3':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['s3Location']['uri']}"
+                            case 'SALESFORCE':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['salesforceLocation']['url']}"
+                            case 'SHAREPOINT':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['sharePointLocation']['url']}"
+                            case 'SQL':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['sqlLocation']['query']}"
+                            case 'WEB':
+                                citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['webLocation']['url']}"
+                            case _:
+                                logger.warning(f"Unknown location type: {retrieved_ref['location']['type']}")
+                        citation_num += 1
+                output_text += f"\n{citation_locs}"
 
-                    # Add citations
-                    if len(response.get("citations", [])) > 0:
-                        citation_num = 1
-                        output_text = re.sub(r"%\[(\d+)\]%", r"<sup>[\1]</sup>", output_text)
-                        citation_locs = ""
-                        for citation in response["citations"]:
-                            for retrieved_ref in citation["retrievedReferences"]:
-                                citation_marker = f"[{citation_num}]"
-                                # Adding citation locations based on the type
-                                match retrieved_ref['location']['type']:
-                                    case 'CONFLUENCE':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['confluenceLocation']['url']}"
-                                    case 'CUSTOM':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['customDocumentLocation']['id']}"
-                                    case 'KENDRA':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['kendraDocumentLocation']['uri']}"
-                                    case 'S3':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['s3Location']['uri']}"
-                                    case 'SALESFORCE':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['salesforceLocation']['url']}"
-                                    case 'SHAREPOINT':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['sharePointLocation']['url']}"
-                                    case 'SQL':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['sqlLocation']['query']}"
-                                    case 'WEB':
-                                        citation_locs += f"\n<br>{citation_marker} {retrieved_ref['location']['webLocation']['url']}"
-                                    case _:
-                                        logger.warning(f"Unknown location type: {retrieved_ref['location']['type']}")
-                                citation_num += 1
-                        output_text += f"\n{citation_locs}"
-
-                    st.session_state.messages.append({"role": "assistant", "content": output_text})
-                    st.session_state.citations = response.get("citations", [])
-                    st.session_state.trace = response.get("trace", {})
-                    st.markdown(output_text, unsafe_allow_html=True)
-
+            st.session_state.messages.append({"role": "assistant", "content": output_text})
+            st.session_state.citations = response["citations"]
+            st.session_state.trace = response["trace"]
+            st.markdown(output_text, unsafe_allow_html=True)
 
 trace_types_map = {
     "Pre-Processing": ["preGuardrailTrace", "preProcessingTrace"],
