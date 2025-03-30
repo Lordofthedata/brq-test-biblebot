@@ -41,6 +41,7 @@ brq_region_name=os.environ.get("AWS_REGION")
 
 def init_session_state():
     st.session_state.session_id = str(uuid.uuid4())
+    st.session_state.messages = []
     st.session_state.citations = []
     st.session_state.trace = {}
 
@@ -58,7 +59,8 @@ with st.sidebar:
         
 # Display an initial welcome message
 if 'messages' not in st.session_state:
-    st.session_state['messages'] = [{"role": "assistant", "content": "Willkommen bei deinem digitalen Begleiter fürs Bibelstudium 👋 Bitte stelle mir eine Frage - ich versuche auf Basis mehrerer hundert renommierter Bibelkommentare eine Antwort auf deine Frage zu finden."}]
+    with st.chat_message("Barnabas"):
+        st.write("Willkommen bei deinem digitalen Begleiter fürs Bibelstudium 👋 Bitte stelle mir eine Frage - ich versuche auf Basis mehrerer hundert renommierter Bibelkommentare eine Antwort auf deine Frage zu finden.")
 
 # Messages in the conversation
 for message in st.session_state.messages:
