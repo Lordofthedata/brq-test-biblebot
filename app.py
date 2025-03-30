@@ -42,6 +42,10 @@ def init_session_state():
 # General page configuration and initialization
 st.set_page_config(page_title=ui_title, page_icon=ui_icon, layout="wide")
 st.title(ui_title)
+# Display an initial welcome message
+if 'messages' not in st.session_state:
+    with st.chat_message("Barnabas"):
+        st.write("Willkommen bei deinem digitalen Begleiter fürs Bibelstudium 👋 Bitte stelle mir eine Frage - ich versuche auf Basis mehrerer hundert renommierter Bibelkommentare eine Antwort auf deine Frage zu finden.")
 if len(st.session_state.items()) == 0:
     init_session_state()
 
@@ -50,10 +54,6 @@ with st.sidebar:
     if st.button("Reset Session"):
         init_session_state()
         
-# Display an initial welcome message
-if 'messages' not in st.session_state:
-    with st.chat_message("Barnabas"):
-        st.write("Willkommen bei deinem digitalen Begleiter fürs Bibelstudium 👋 Bitte stelle mir eine Frage - ich versuche auf Basis mehrerer hundert renommierter Bibelkommentare eine Antwort auf deine Frage zu finden.")
 
 # Messages in the conversation
 for message in st.session_state.messages:
